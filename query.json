@@ -1,0 +1,8 @@
+{
+    "name":"Quincy",
+    "operation":"addition",
+    "num_problems":10,
+    "max_number":16,
+    "likes_nouns":["robots","cookies","dinosaurs"],
+    "likes_verbs":["build","eat","bicycle"]
+}

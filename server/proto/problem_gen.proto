@@ -1,0 +1,44 @@
+// server/proto/problem_gen.proto
+syntax = "proto3";
+
+package problemgen;
+option go_package = "./server/proto;proto";
+
+// Request to generate a math problem set
+message GenerateRequest {
+  string name = 1;
+  string operation = 2;
+  int32 num_problems = 3;
+  int32 max_number = 4;
+  repeated string likes_nouns = 5;
+  repeated string likes_verbs = 6;
+}
+
+// Single math problem
+message Problem {
+  int32 index = 1;
+  string text = 2;
+  repeated int32 numbers = 3;
+  string operation = 4;
+  string answer = 5;
+}
+
+// Set of problems plus original request
+message ProblemSet {
+  repeated Problem problems = 1;
+  GenerateRequest meta = 2;
+}
+
+// Response containing generated PDF bytes
+message PDFResponse {
+  bytes pdf = 1;
+  string filename = 2;
+}
+
+// Generator service definition
+service Generator {
+  // Generate a set of math problems based on user preferences
+  rpc GenerateProblemSet(GenerateRequest) returns (ProblemSet);
+  // Generate both problems and a PDF file containing them
+  rpc GenerateProblemSetPDF(ProblemSet) returns (PDFResponse);
+}

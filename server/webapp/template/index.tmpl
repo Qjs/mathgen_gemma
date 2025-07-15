@@ -1,0 +1,31 @@
+{{define "index.tmpl"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Math-Gen Demo</title>
+  <style>
+    body{font-family:system-ui,arial;margin:2rem 4rem;line-height:1.4}
+    textarea{width:100%;max-width:70ch;height:18rem}
+    .box{border:1px solid #bbb;border-radius:.4rem;padding:1rem;margin-bottom:1rem}
+  </style>
+</head>
+<body>
+  <h1>Generate a PDF Problem-Set</h1>
+
+  <form action="/generatePDF" method="post" enctype="multipart/form-data">
+    <div class="box">
+      <h3>1. Upload a JSON query file (pb.GenerateRequest)</h3>
+      <input type="file" name="queryFile" accept=".json">
+    </div>
+
+    <div class="box">
+      <h3>2. …or paste the JSON here</h3>
+      <textarea name="queryText" placeholder='{"numProblems":10,"topics":["algebra"]}'></textarea>
+    </div>
+
+    <button type="submit">Generate PDF ➜</button>
+  </form>
+</body>
+</html>
+{{end}}
