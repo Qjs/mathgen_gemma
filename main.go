@@ -12,6 +12,7 @@ import (
 
 	grpcSrv "github.com/qjs/mathgen_gemma/server/grpc"
 	pdfg "github.com/qjs/mathgen_gemma/server/pdf_generator"
+	pg "github.com/qjs/mathgen_gemma/server/problem_generator"
 	pb "github.com/qjs/mathgen_gemma/server/proto"
 	"github.com/qjs/mathgen_gemma/server/webapp"
 
@@ -19,18 +20,16 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func main() {
-	//------------------------------------------------------------
-	// CLI flags
-	//------------------------------------------------------------
+var (
+	outDir   = flag.String("out_dir", "./output", "directory to write JSON + PDF results")
+	grpcPort = flag.String("grpc-port", ":50051", "gRPC server port")
+	ollama   = flag.String("ollama_url", "http://localhost:11434", "base URL of Ollama API")
+	model    = flag.String("model", "gemma3n:e4b", "model name to pass to Ollama")
+	webPort  = flag.String("web_port", ":8081", "port for Gin web UI")
+)
 
-	var (
-		outDir   = flag.String("out_dir", "./output", "directory to write JSON + PDF results")
-		grpcPort = flag.String("grpc-port", ":50051", "gRPC server port")
-		ollama   = flag.String("ollama_url", "http://localhost:11434", "base URL of Ollama API")
-		model    = flag.String("model", "gemma3n:latest", "model name to pass to Ollama")
-		webPort  = flag.String("web_port", ":8080", "port for Gin web UI")
-	)
+func main() {
+
 	flag.Parse()
 
 	//------------------------------------------------------------
@@ -53,7 +52,8 @@ func main() {
 		PrimaryColor: [3]int{20, 20, 20},
 		Timeout:      30 * time.Second,
 	})
-	svc := grpcSrv.NewServer(pdfGen, *ollama, *model) // <-- matches new signature
+	agent := pg.NewCSVAgent()
+	svc := grpcSrv.NewServer(pdfGen, *ollama, *model, agent) // <-- matches new signature
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterGeneratorServer(grpcServer, svc)
@@ -77,22 +77,21 @@ func main() {
 
 	client := pb.NewGeneratorClient(conn)
 
-	// add flag
-
-	// after the gRPC client is created:
-	webApp := webapp.NewWebApp(client)
+	// after you create `client` (the gRPC client):
+	webApp := webapp.NewWebApp(client, *outDir)
 	go webApp.Run(*webPort)
 
-	// … then, inside the shutdown section:
+	// This is the crucial part: Wait for the shutdown signal
 	<-ctx.Done()
 	log.Println("⏹  shutting down …")
-	_ = webApp.Shutdown(context.Background())
-	grpcServer.GracefulStop()
 
-	//------------------------------------------------------------
-	// 4.  Wait for CTRL-C and shut down
-	//------------------------------------------------------------
-	<-ctx.Done()
-	log.Println("⏹  SIGINT/SIGTERM received; stopping server …")
-	grpcServer.GracefulStop()
+	// Now gracefully shut down both servers
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second) // Give it some time
+	defer cancelShutdown()
+
+	if err := webApp.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Web app shutdown error: %v", err)
+	}
+	grpcServer.GracefulStop() // GracefulStop is blocking until all RPCs finish or timeout
+	log.Println("✅ Servers shut down.")
 }

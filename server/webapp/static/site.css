@@ -1,0 +1,4 @@
+textarea.textarea{min-height:14rem}
+
+/* htmx spinner handling */
+.htmx-request #spinner{display:inline-block}

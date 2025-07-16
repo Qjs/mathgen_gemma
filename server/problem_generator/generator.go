@@ -2,112 +2,99 @@
 package problemgenerator
 
 import (
-	"context"
+	"encoding/csv"
+	"errors"
 	"fmt"
-	"math/rand"
+	"io"
+	"regexp"
+	"strconv"
 	"strings"
-	"text/template"
-	"time"
 
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
+	pb "github.com/qjs/mathgen_gemma/server/proto"
 )
 
-type Generator struct {
-	Repo TemplateRepo
-	rng  *rand.Rand
-}
+var (
+	reInts        = regexp.MustCompile(`\d+`)
+	errEmptyCSV   = errors.New("empty CSV from LLM")
+	errBadColumns = errors.New("malformed CSV line (want at least Problem,Text)")
+)
 
-func NewGenerator(repo TemplateRepo) *Generator {
-	return &Generator{
-		Repo: repo,
-		rng:  rand.New(rand.NewSource(time.Now().UnixNano())),
-	}
-}
+// CSVAgent implements Agent by reading "Problem,Text" rows and computing answers.
+type CSVAgent struct{}
 
-// GenerateRequest defines the input for generating a problem set.
-// It includes the user's name, the type of operation, number of problems,
-func (g *Generator) GenerateProblemSet(ctx context.Context, req GenerateRequest) (ProblemSet, error) {
-	// 1. validation
-	if req.NumProblems < 1 || req.NumProblems > 50 {
-		return ProblemSet{}, fmt.Errorf("num_problems out of range")
-	}
-	// 2. fetch candidate templates
-	templates, err := g.Repo.ListByOperation(ctx, req.Operation)
-	if err != nil {
-		return ProblemSet{}, err
-	}
-	if len(templates) == 0 {
-		return ProblemSet{}, fmt.Errorf("no templates for criteria")
-	}
+func NewCSVAgent() *CSVAgent { return &CSVAgent{} }
 
-	problems := make([]Problem, req.NumProblems)
-	for i := 0; i < req.NumProblems; i++ {
-		tmpl := templates[g.rng.Intn(len(templates))]
-		p, err := g.instantiate(tmpl.Template, req, i+1)
+// ----------------------------- core logic ------------------------------
+
+func (a *CSVAgent) Parse(llmOut string, req *pb.GenerateRequest) (*ProblemSet, error) {
+	r := csv.NewReader(strings.NewReader(llmOut))
+	r.TrimLeadingSpace = true
+
+	var (
+		problems []Problem
+		rowNo    int
+	)
+	for {
+		rowNo++
+		rec, err := r.Read()
+		if err == io.EOF {
+			break
+		}
 		if err != nil {
-			return ProblemSet{}, err
+			return nil, err
 		}
-		problems[i] = p
+		if len(rec) < 2 {
+			return nil, errBadColumns
+		}
+
+		// First col → index (strip optional "Problem " prefix)
+		idx, _ := strconv.Atoi(strings.TrimPrefix(strings.ToLower(rec[0]), "problem "))
+		if idx == 0 {
+			idx = rowNo
+		}
+
+		text := rec[1]
+
+		// ---------- pull first two ints & compute answer --------------
+		aNum, bNum, answer := extractNumbersAndAnswer(text, strings.ToLower(req.Operation))
+
+		problems = append(problems, Problem{
+			Index:     idx,
+			Text:      text,
+			Numbers:   []int{aNum, bNum},
+			Operation: strings.ToLower(req.Operation),
+			Answer:    answer,
+		})
 	}
-	return ProblemSet{Problems: problems, MetaInfo: req}, nil
+
+	if len(problems) == 0 {
+		return nil, errEmptyCSV
+	}
+
+	meta := GenerateRequest{
+		Name:        req.Name,
+		Operation:   req.Operation,
+		NumProblems: int(req.NumProblems),
+		MaxNumber:   int(req.MaxNumber),
+		LikesNouns:  req.LikesNouns,
+		LikesVerbs:  req.LikesVerbs,
+	}
+	return &ProblemSet{Problems: problems, MetaInfo: meta}, nil
 }
 
-// helper --------------------------------------------------------------
+// ----------------------------- helpers --------------------------------
 
-type tplData struct {
-	Name, Pronoun, Noun1, Verb1 string
-	Num1, Num2                  int
-	PronounLower                string
+func extractNumbersAndAnswer(text, op string) (int, int, string) {
+	ints := reInts.FindAllString(text, -1)
+	if len(ints) < 2 {
+		return 0, 0, "N/A"
+	}
+	a, _ := strconv.Atoi(ints[0])
+	b, _ := strconv.Atoi(ints[1])
+	return a, b, computeAnswer(op, a, b)
 }
 
-func (g *Generator) instantiate(tpl string, req GenerateRequest, idx int) (Problem, error) {
-	num1 := g.rng.Intn(req.MaxNumber) + 1
-	num2 := g.rng.Intn(req.MaxNumber) + 1
-
-	if req.Operation == "subtraction" {
-		// ensure num1 is always less than num2 for subtraction problems
-		if num1 > num2 {
-			num1, num2 = num2, num1
-		}
-	}
-	if req.Operation == "division" {
-		// ensure num1 is always less than num2 for division problems
-		if num1 > num2 {
-			num1, num2 = num2, num1
-		}
-	}
-
-	// Select random noun and verb from user's preferences
-	noun := req.LikesNouns[g.rng.Intn(len(req.LikesNouns))]
-	verb := req.LikesVerbs[g.rng.Intn(len(req.LikesVerbs))]
-	pron := "they"
-	title := cases.Title(language.English).String(pron)
-	data := tplData{
-		Name: req.Name, Pronoun: title, PronounLower: strings.ToLower(pron),
-		Noun1: noun, Verb1: verb, Num1: num1, Num2: num2,
-	}
-
-	// Execute Go template
-	t, err := template.New("p").Parse(tpl)
-	if err != nil {
-		return Problem{}, err
-	}
-	var sb strings.Builder
-	if err := t.Execute(&sb, data); err != nil {
-		return Problem{}, err
-	}
-
-	answer := computeAnswer(req.Operation, num1, num2)
-
-	return Problem{
-		Index: idx, Text: sb.String(),
-		Numbers:   []int{num1, num2},
-		Operation: req.Operation,
-		Answer:    answer,
-	}, nil
-}
-
+// computeAnswer is the exact helper you supplied.
 func computeAnswer(op string, a, b int) string {
 	switch op {
 	case "addition":
@@ -117,7 +104,11 @@ func computeAnswer(op string, a, b int) string {
 	case "multiplication":
 		return fmt.Sprintf("%d * %d = %d", a, b, a*b)
 	case "division":
+		if b == 0 {
+			return "division by zero"
+		}
 		return fmt.Sprintf("%d / %d = %d", a, b, a/b)
+	default:
+		return fmt.Sprintf("unknown operation %s", op)
 	}
-	return fmt.Sprintf("unknown operation %s", op)
 }

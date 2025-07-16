@@ -1,31 +1,87 @@
-{{define "index.tmpl"}}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>Math-Gen Demo</title>
-  <style>
-    body{font-family:system-ui,arial;margin:2rem 4rem;line-height:1.4}
-    textarea{width:100%;max-width:70ch;height:18rem}
-    .box{border:1px solid #bbb;border-radius:.4rem;padding:1rem;margin-bottom:1rem}
-  </style>
-</head>
-<body>
-  <h1>Generate a PDF Problem-Set</h1>
+{{/* thin wrapper that executes the layout */}}
+{{define "index"}}
+  {{template "layout" .}}
+{{end}}
 
-  <form action="/generatePDF" method="post" enctype="multipart/form-data">
-    <div class="box">
-      <h3>1. Upload a JSON query file (pb.GenerateRequest)</h3>
-      <input type="file" name="queryFile" accept=".json">
+{{/* overrides the title block defined in layout */}}
+{{define "title"}}Generate a PDF Problem-Set{{end}}
+
+{{/* overrides the content block */}}
+{{define "content"}}
+<h1 class="title is-3">Generate a PDF Problem-Set</h1>
+
+<div class="box">
+  <form id="pdfForm"
+        hx-post="/generatePDF"
+        hx-target="#status"
+        hx-indicator="#spinner">
+
+    <!-- Name -->
+    <div class="field">
+      <label class="label">Student name</label>
+      <div class="control">
+        <input class="input" type="text" name="name" placeholder="Alex" required>
+      </div>
     </div>
 
-    <div class="box">
-      <h3>2. …or paste the JSON here</h3>
-      <textarea name="queryText" placeholder='{"numProblems":10,"topics":["algebra"]}'></textarea>
+    <!-- Operation -->
+    <div class="field">
+      <label class="label">Operation</label>
+      <div class="control">
+        <div class="select">
+          <select name="operation" required>
+            <option value="add">addition</option>
+            <option value="subtract">subtraction</option>
+            <option value="multiply">multiplication</option>
+            <option value="divide">division</option>
+          </select>
+        </div>
+      </div>
     </div>
 
-    <button type="submit">Generate PDF ➜</button>
+    <!-- Number of problems -->
+    <div class="field">
+      <label class="label">Number of problems</label>
+      <div class="control">
+        <input class="input" type="number" name="numProblems" value="10" min="1" required>
+      </div>
+    </div>
+
+    <!-- Max number -->
+    <div class="field">
+      <label class="label">Largest number allowed</label>
+      <div class="control">
+        <input class="input" type="number" name="maxNumber" value="100" min="1" required>
+      </div>
+    </div>
+
+    <!-- Likes nouns -->
+    <div class="field">
+      <label class="label">Favourite nouns <span class="has-text-grey">(comma separated)</span></label>
+      <div class="control">
+        <input class="input" type="text" name="likesNouns" placeholder="pizza, robots">
+      </div>
+    </div>
+
+    <!-- Likes verbs -->
+    <div class="field">
+      <label class="label">Favourite verbs <span class="has-text-grey">(comma separated)</span></label>
+      <div class="control">
+        <input class="input" type="text" name="likesVerbs" placeholder="run, jump">
+      </div>
+    </div>
+
+    <!-- Submit + spinner -->
+    <div class="field">
+      <div class="control">
+        <button class="button is-primary">Generate PDF</button>
+        <span id="spinner" class="icon is-large has-text-link is-hidden">
+          <i class="fas fa-circle-notch fa-spin fa-lg"></i>
+        </span>
+      </div>
+    </div>
   </form>
-</body>
-</html>
+</div>
+
+<div id="status"></div>
 {{end}}

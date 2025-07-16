@@ -1,0 +1,8 @@
+{{define "snippet_success"}}
+<article class="message is-success mt-4">
+  <div class="message-body">
+    {{if .Name}}<strong>{{.Name}}</strong>, {{end}}your worksheet is ready
+    <a class="has-text-weight-bold" hx-boost="true" href="/download/{{.ID}}">download&nbsp;PDF</a>.
+  </div>
+</article>
+{{end}}

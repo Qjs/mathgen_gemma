@@ -3,15 +3,16 @@ package grpcSrv
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"log"
+	"net/http"
 	"net/url"
 	"os"
-	"strings"
+	"time"
 
 	pdfg "github.com/qjs/mathgen_gemma/server/pdf_generator"
 	pg "github.com/qjs/mathgen_gemma/server/problem_generator"
+	"github.com/qjs/mathgen_gemma/server/prompts"
 	pb "github.com/qjs/mathgen_gemma/server/proto"
 
 	api "github.com/ollama/ollama/api"
@@ -26,56 +27,74 @@ type Server struct {
 	pdfgen *pdfg.PDFGenerator
 	client *api.Client
 	model  string
+	agent  pg.Agent
 }
 
-// NewServer creates a new gRPC Server with the given PDF generator, Ollama base URL, and model name.
-func NewServer(pdfgen *pdfg.PDFGenerator, ollamaBaseURL, model string) *Server {
-	// ollamaBaseURL like "http://localhost:11434"
-	base, _ := url.Parse(ollamaBaseURL)
-	client := api.NewClient(base, nil)
-	return &Server{pdfgen: pdfgen, client: client, model: model}
+func NewServer(pdfgen *pdfg.PDFGenerator, ollamaBaseURL, model string, agent pg.Agent) *Server {
+	base, err := url.Parse(ollamaBaseURL)
+	if err != nil {
+		log.Fatalf("invalid Ollama URL: %v", err)
+	}
+
+	httpClient := &http.Client{
+		Timeout: 120 * time.Second, // whatever is sensible for your env
+	}
+
+	client := api.NewClient(base, httpClient)
+
+	return &Server{
+		pdfgen: pdfgen,
+		client: client,
+		model:  model,
+		agent:  agent,
+	}
 }
 
 // GenerateProblemSet queries Ollama for a JSON-formatted problem set and converts it to protobuf.
 func (s *Server) GenerateProblemSet(ctx context.Context, req *pb.GenerateRequest) (*pb.ProblemSet, error) {
-	// Build prompt
-	prompt := fmt.Sprintf(
-		"Generate %d %s problems with numbers up to %d in pure JSON (no markdown). The JSON schema: {\"problems\":[{\"index\":int,\"text\":string,\"numbers\":[int,int],\"operation\":string,\"answer\":string}],\"meta\":{\"name\":string,\"operation\":string,\"num_problems\":int,\"max_number\":int,\"likes_nouns\":[string],\"likes_verbs\":[string]}}. Use name=\"%s\", operation=\"%s\".",
-		req.NumProblems, strings.ToLower(req.Operation), req.MaxNumber,
-		req.Name, req.Operation,
-	)
+	//------------------------------------------------------------------
+	// 1. Build the prompt with our Kid-Friendly style
+	//------------------------------------------------------------------
+	pbldr := prompts.Builder{
+		Style: prompts.StyleKidFriendly,
+		Model: s.model,
+	}
+	prompt, err := pbldr.Build(req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "prompt build: %v", err)
+	}
 
-	// Prepare GenerateRequest (non‑stream, JSON format)
+	//------------------------------------------------------------------
+	// 2. Ask Ollama
+	//------------------------------------------------------------------
 	stream := false
-	format := json.RawMessage(`"json"`)
+	// format := json.RawMessage(`"text"`)
 	gReq := &api.GenerateRequest{
 		Model:  s.model,
 		Prompt: prompt,
 		Stream: &stream,
-		Format: format,
+		// Format: format,
 	}
 
 	var responseText string
-	// api.Client.Generate streams via callback even when Stream==false; we accumulate.
-	err := s.client.Generate(ctx, gReq, func(gr api.GenerateResponse) error {
+	if err := s.client.Generate(ctx, gReq, func(gr api.GenerateResponse) error {
 		responseText += gr.Response
 		return nil
-	})
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "ollama generate error: %v", err)
+	}); err != nil {
+		fmt.Printf("ollama generate: %v\n", err)
+		return nil, status.Errorf(codes.Internal, "ollama generate: %v", err)
 	}
 
-	// Unmarshal JSON into protobuf ProblemSet
-	var ps pb.ProblemSet
-	if err := json.Unmarshal([]byte(responseText), &ps); err != nil {
-		return nil, status.Errorf(codes.Internal, "JSON parse error: %v LLM output: %s", err, responseText)
+	ps, err := s.agent.Parse(responseText, req)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "parse LLM output: %v", err)
 	}
-	return &ps, nil
+	return convertFromInternal(ps), nil
 }
 
 // GenerateProblemSetPDF renders PDF from a protobuf ProblemSet.
 func (s *Server) GenerateProblemSetPDF(ctx context.Context, psReq *pb.ProblemSet) (*pb.PDFResponse, error) {
-	tmp, err := ioutil.TempFile("", "problem_set_*.pdf")
+	tmp, err := os.CreateTemp("", "problem_set_*.pdf")
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "tmp file: %v", err)
 	}
@@ -85,7 +104,7 @@ func (s *Server) GenerateProblemSetPDF(ctx context.Context, psReq *pb.ProblemSet
 	if err := s.pdfgen.GeneratePDF(ctx, *convertToInternal(psReq), tmp.Name()); err != nil {
 		return nil, status.Errorf(codes.Internal, "pdf gen: %v", err)
 	}
-	data, err := ioutil.ReadFile(tmp.Name())
+	data, err := os.ReadFile(tmp.Name())
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "read pdf: %v", err)
 	}
@@ -117,4 +136,31 @@ func convertToInternal(pbps *pb.ProblemSet) *pg.ProblemSet {
 		LikesVerbs:  pbps.Meta.LikesVerbs,
 	}
 	return &pg.ProblemSet{Problems: problems, MetaInfo: meta}
+}
+
+// convertToInternal converts a protobuf ProblemSet to the internal pg.ProblemSet used by the PDF generator.
+func convertFromInternal(pg *pg.ProblemSet) *pb.ProblemSet {
+	problems := make([]*pb.Problem, len(pg.Problems))
+	for i, p := range pg.Problems {
+		nums := make([]int32, len(p.Numbers))
+		for j, n := range p.Numbers {
+			nums[j] = int32(n)
+		}
+		problems[i] = &pb.Problem{
+			Index:     int32(p.Index),
+			Text:      p.Text,
+			Numbers:   nums,
+			Operation: p.Operation,
+			Answer:    p.Answer,
+		}
+	}
+	meta := &pb.GenerateRequest{
+		Name:        pg.MetaInfo.Name,
+		Operation:   pg.MetaInfo.Operation,
+		NumProblems: int32(pg.MetaInfo.NumProblems),
+		MaxNumber:   int32(pg.MetaInfo.MaxNumber),
+		LikesNouns:  pg.MetaInfo.LikesNouns,
+		LikesVerbs:  pg.MetaInfo.LikesVerbs,
+	}
+	return &pb.ProblemSet{Problems: problems, Meta: meta}
 }
