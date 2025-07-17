@@ -1,7 +1,6 @@
 package prompts
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -28,7 +27,7 @@ const (
 	StyleCompact Style = iota
 	StyleSchema
 	StyleVerbose
-	StyleKidFriendly // 🆕 our custom, Amelia-style prompt
+	StyleProblemset
 )
 
 // Builder holds configuration for generating prompts.
@@ -38,52 +37,29 @@ type Builder struct {
 	Model string // optional: model name for conditional phrasing
 }
 
+type Prompt struct {
+	System string
+	User   string
+}
+
 // Build returns a prompt string based on the GenerateRequest and Style.
-func (b Builder) Build(req *pb.GenerateRequest) (string, error) {
+func (b Builder) Build(req *pb.GenerateRequest) (Prompt, error) {
+	var prompt Prompt
+	prompt.System = "You are a creative math problem generator. Your task is to create word problems based on the user's preferences.The problems should be tailored to a student named and focus on the requested math operations (Addition/Subtraction/Multiplication/Division).The problems should use numbers up to a max number value"
 	switch b.Style {
 	case StyleCompact:
-		return fmt.Sprintf(
+		prompt.User = fmt.Sprintf(
 			"Generate %d %s problems with numbers up to %d in pure JSON (no markdown).",
 			req.NumProblems, strings.ToLower(req.Operation), req.MaxNumber,
-		), nil
+		)
 
-	case StyleSchema:
-		// Provide a minimal schema example so the LLM is crystal clear.
-		schema, _ := json.Marshal(map[string]any{
-			"problems": []any{
-				map[string]any{
-					"index":     "int",
-					"text":      "string",
-					"numbers":   []string{"int", "int"},
-					"operation": "string",
-					"answer":    "string",
-				},
-			},
-			"meta": map[string]any{
-				"name":         "string",
-				"operation":    "string",
-				"num_problems": "int",
-				"max_number":   "int",
-				"likes_nouns":  []string{"string"},
-				"likes_verbs":  []string{"string"},
-			},
-		})
-		return fmt.Sprintf(
-			"Return ONLY JSON matching this schema: %s. Fill it with %d %s problems (numbers ≤ %d) for student \"%s\". Use nouns %v and verbs %v.",
-			schema,
-			req.NumProblems, strings.ToLower(req.Operation), req.MaxNumber, req.Name,
-			req.LikesNouns, req.LikesVerbs,
-		), nil
-	case StyleKidFriendly:
+	case StyleProblemset:
 		// Assemble topics from LikesNouns + LikesVerbs for "Preferred Topics" line.
 		topics := append([]string{}, req.LikesNouns...)
 		topics = append(topics, req.LikesVerbs...)
 		topicsLine := strings.Join(topics, ", ")
 
-		return fmt.Sprintf(`
-You are a creative math problem generator. Your task is to create %d word problems based on the user's preferences.
-The problems should be tailored to a student named %s and focus on %s math operations. The problems should use numbers up to %d.
-
+		prompt.User = fmt.Sprintf(`
 Here's the user's information:
 - Name: %s
 - Preferred Topics: %s
@@ -97,41 +73,40 @@ Example Problem Structure (Please aim for similar complexity and style):
 Scenario: [briefly describe a scenario related to the user's interests]
 Problem: [state the math problem clearly] 
 
-Example Output (Format each problem as a separate paragraph): 
+Example Output (Format each problem as a csv): 
 
-Problem 1:
-Imagine [user_name] is exploring a land filled with dinosaurs! There are 15 mighty Tyrannosaurus Rexes and 8 gentle Triceratopses. If each dinosaur has 4 strong legs, how many legs are there in total? 
-
-Problem 2:
-[user_name] is an astronaut on a mission to a distant planet. The spaceship needs to travel 24 light-years. If the spaceship travels at a speed of 3 light-years per day, how many days will the journey take? 
-
-... (rest of the examples) ... 
-
-Remember to: 
-
-     Vary the scenarios and the specific numbers used in the problems.
-     Ensure the problems are grammatically correct and easy to understand.
-     Clearly state the question being asked.
-     Incorporate the user's interests naturally within the problem context.
-     Maintain a positive and engaging tone.
-     Do not provide a code example just the question.
-     List questions in CSV form
-     Add an emoji of the topic of the question next to the interest
+ "Problem 1","Dinosaur 🦖","Imagine Amelia is exploring a land filled with dino-sauruses! She sees 12 Stegosauruses and 9 Brachiosauruses. How many dinosaurs does Amelia see in all?",”addition”,9,12 
+ "Problem 2","Space 🚀","Amelia is counting stars in the night sky. She spots 17 blue stars and 6 yellow stars. What is the total number of stars Amelia counts?",”addition”,17,6 
+ "Problem 3","Unicorn 🦄","Princess Amelia has 11 sparkling unicorn charms and 7 rainbow unicorn stickers. How many unicorn goodies does she have altogether?",”addition”,11,7 
+ "Problem 4","Volcano 🌋","At the volcano, there are 15 red rocks and 8 black rocks. How many rocks are there in total around the volcano?",”addition”,15,8 
+ Remember to: 
+    * Vary the scenarios and the specific numbers used in the problems. 
+    * Ensure the problems are grammatically correct and easy to understand. 
+    * Clearly state the question being asked. 
+    * Incorporate the user's interests naturally within the problem context. 
+    * Maintain a positive and engaging tone. 
+    * Do not provide a code example just the question. 
+    * List questions in CSV form 
+    * Always start the CSV with a fixed header: "Index","theme","text","operation","num1","num2" 
+    * Add an emoji of the topic of the question next to the interest 
+    * The CSV row should have “Problem Number”, “theme”, “problem text'“, “operation”, num1,num2, 
+    * If the operation is Subtraction or Division ensure that num1, num2 are in the order of the operation (avoid illogical operations based on the problem text 
+     
      `,
-			req.NumProblems, req.Name, strings.ToLower(req.Operation), req.MaxNumber,
 			req.Name, topicsLine, req.Operation, req.NumProblems,
 			req.NumProblems, strings.ToLower(req.Operation),
-		), nil
+		)
 
 	case StyleVerbose:
 		fallthrough // default falls back to verbose
 
 	default:
-		return fmt.Sprintf(
+		prompt.User = fmt.Sprintf(
 			"You are an expert math teacher. Create %d engaging %s word problems using numbers up to %d. Incorporate the following nouns %v and verbs %v in the story. Provide the output strictly as JSON with fields: index, text, numbers, operation, answer, and a meta object containing the original request parameters. Do NOT embed markdown.",
 			req.NumProblems, req.Operation, req.MaxNumber, req.LikesNouns, req.LikesVerbs,
-		), nil
+		)
 	}
+	return prompt, nil
 }
 
 // NewBuilder creates a new prompt builder with the specified style.

@@ -47,7 +47,7 @@ func (p *PDFGenerator) GeneratePDF(ctx context.Context, ps pg.ProblemSet, output
 	// ---------- problems ----------
 	pdf.SetFont(p.cfg.FontFamily, "", 14)
 	for _, problem := range ps.Problems {
-		txt := fmt.Sprintf("%d. %s", problem.Index, problem.Text)
+		txt := fmt.Sprintf("%d.%s, %s", problem.Index, problem.Theme, problem.Text)
 		pdf.MultiCell(0, 8, txt, "", "L", false)
 		txtResp := "Answer: _____"
 		pdf.MultiCell(0, 8, txtResp, "", "L", false)

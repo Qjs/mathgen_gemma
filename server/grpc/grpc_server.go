@@ -53,10 +53,10 @@ func NewServer(pdfgen *pdfg.PDFGenerator, ollamaBaseURL, model string, agent pg.
 // GenerateProblemSet queries Ollama for a JSON-formatted problem set and converts it to protobuf.
 func (s *Server) GenerateProblemSet(ctx context.Context, req *pb.GenerateRequest) (*pb.ProblemSet, error) {
 	//------------------------------------------------------------------
-	// 1. Build the prompt with our Kid-Friendly style
+	// 1. Build the prompt with our style
 	//------------------------------------------------------------------
 	pbldr := prompts.Builder{
-		Style: prompts.StyleKidFriendly,
+		Style: prompts.StyleProblemset,
 		Model: s.model,
 	}
 	prompt, err := pbldr.Build(req)
@@ -69,22 +69,25 @@ func (s *Server) GenerateProblemSet(ctx context.Context, req *pb.GenerateRequest
 	//------------------------------------------------------------------
 	stream := false
 	// format := json.RawMessage(`"text"`)
-	gReq := &api.GenerateRequest{
+	cReq := &api.ChatRequest{
 		Model:  s.model,
-		Prompt: prompt,
 		Stream: &stream,
 		// Format: format,
+		Messages: []api.Message{
+			{Role: "system", Content: prompt.System},
+			{Role: "user", Content: prompt.User},
+		},
 	}
 
 	var responseText string
-	if err := s.client.Generate(ctx, gReq, func(gr api.GenerateResponse) error {
-		responseText += gr.Response
+	err = s.client.Chat(ctx, cReq, func(cr api.ChatResponse) error {
+		responseText += cr.Message.Content
 		return nil
-	}); err != nil {
-		fmt.Printf("ollama generate: %v\n", err)
-		return nil, status.Errorf(codes.Internal, "ollama generate: %v", err)
+	})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "ollama resp: %v", err)
 	}
-
+	fmt.Printf("%s\n", responseText)
 	ps, err := s.agent.Parse(responseText, req)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "parse LLM output: %v", err)
@@ -121,6 +124,7 @@ func convertToInternal(pbps *pb.ProblemSet) *pg.ProblemSet {
 		}
 		problems[i] = pg.Problem{
 			Index:     int(p.Index),
+			Theme:     p.Theme,
 			Text:      p.Text,
 			Numbers:   nums,
 			Operation: p.Operation,
@@ -148,6 +152,7 @@ func convertFromInternal(pg *pg.ProblemSet) *pb.ProblemSet {
 		}
 		problems[i] = &pb.Problem{
 			Index:     int32(p.Index),
+			Theme:     p.Theme,
 			Text:      p.Text,
 			Numbers:   nums,
 			Operation: p.Operation,

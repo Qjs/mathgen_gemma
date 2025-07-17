@@ -13,6 +13,7 @@ type GenerateRequest struct {
 
 type Problem struct {
 	Index     int    `json:"index"`
+	Theme     string `json:"theme"`
 	Text      string `json:"text"`
 	Numbers   []int  `json:"numbers"`
 	Operation string `json:"operation"`

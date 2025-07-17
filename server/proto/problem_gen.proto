@@ -17,10 +17,11 @@ message GenerateRequest {
 // Single math problem
 message Problem {
   int32 index = 1;
-  string text = 2;
-  repeated int32 numbers = 3;
-  string operation = 4;
-  string answer = 5;
+  string theme = 2;
+  string text = 3;
+  repeated int32 numbers = 4;
+  string operation = 5;
+  string answer = 6;
 }
 
 // Set of problems plus original request

@@ -121,6 +121,7 @@ func (app *WebApp) generatePDF(c *gin.Context) {
 		c.String(http.StatusInternalServerError, "gRPC error: %v", err)
 		return
 	}
+	fmt.Printf("Generated %d problems\n", len(problemResp.Problems))
 	pdfResp, err := app.GRPCClient.GenerateProblemSetPDF(ctx, problemResp)
 	if err != nil {
 		c.String(http.StatusInternalServerError, "gRPC error: %v", err)
