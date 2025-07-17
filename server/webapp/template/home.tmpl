@@ -1,0 +1,24 @@
+{{ define "home" }}
+  {{ template "header" . }}
+
+  <section class="hero is-link is-fullheight-with-navbar">
+    <div class="hero-body">
+      <div class="container has-text-centered">
+        <h1 class="title is-1">
+          Instantly create student-specific math problem sets
+        </h1>
+        <p class="subtitle is-4 mb-6">
+          Pick the operations, the numbers and your learner’s favourite words –
+          get a printable PDF in seconds.
+        </p>
+
+        <a href="/worksheet" class="button is-primary is-large">
+          <span class="icon"><i class="fa fa-magic"></i></span>
+          <span>Make my personal problem set!</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  {{ template "footer" . }}
+{{ end }}

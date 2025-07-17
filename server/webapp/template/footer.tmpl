@@ -1,0 +1,20 @@
+{{ define "footer" }}
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+<!-- download modal placeholder -->
+<div id="downloadModal" class="modal"></div>
+
+<script>
+  document.body.addEventListener('htmx:oobAfterSwap', (e) => {
+    if (e.detail.target.id === 'downloadModal') {
+      e.detail.target.classList.add('is-active');
+    }
+  });
+  document.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('.modal-background,.delete,[data-close-modal]');
+    if (btn) btn.closest('.modal').classList.remove('is-active');
+  });
+</script>
+</body>
+</html>
+{{ end }}

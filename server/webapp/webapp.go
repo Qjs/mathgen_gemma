@@ -75,14 +75,23 @@ func (app *WebApp) Shutdown(ctx context.Context) error {
 // ----------------------------------------------------------------------
 
 func (app *WebApp) setupRoutes() {
-	app.Router.GET("/", app.indexPage)
+	app.Router.GET("/", app.homePage)
+	app.Router.GET("/worksheet", app.formPage)
 	app.Router.POST("/generatePDF", app.generatePDF)
 	app.Router.GET("/download/:id", app.downloadPDF)
 }
 
 // GET /
-func (app *WebApp) indexPage(c *gin.Context) {
-	c.HTML(http.StatusOK, "index", gin.H{}) // not "index.tmpl"
+func (app *WebApp) homePage(c *gin.Context) {
+	c.HTML(http.StatusOK, "home", gin.H{
+		"Title": "Personalized Math Worksheets",
+	})
+}
+
+func (app *WebApp) formPage(c *gin.Context) {
+	c.HTML(http.StatusOK, "worksheet", gin.H{
+		"Title": "Generate a PDF Problem-Set",
+	})
 }
 
 // POST /generatePDF  (htmx request)

@@ -1,20 +1,16 @@
-{{/* thin wrapper that executes the layout */}}
-{{define "index"}}
-  {{template "layout" .}}
-{{end}}
+{{ define "worksheet" }}
+  {{ template "header" . }}
 
-{{/* overrides the title block defined in layout */}}
-{{define "title"}}Generate a PDF Problem-Set{{end}}
+  <section class="section">
+    <div class="container">
 
-{{/* overrides the content block */}}
-{{define "content"}}
-<h1 class="title is-3">Generate a PDF Problem-Set</h1>
+      <h1 class="title is-3">Generate a PDF Problem-Set</h1>
 
-<div class="box">
-  <form id="pdfForm"
-        hx-post="/generatePDF"
-        hx-target="#status"
-        hx-indicator="#spinner">
+      <div class="box">
+        <form id="pdfForm"
+              hx-post="/generatePDF"
+              hx-target="#status"
+              hx-indicator="#spinner">
 
     <!-- Name -->
     <div class="field">
@@ -93,6 +89,9 @@
     </div>
   </form>
 </div>
+      <div id="status"></div>
+    </div>
+  </section>
 
-<div id="status"></div>
-{{end}}
+  {{ template "footer" . }}
+{{ end }}
