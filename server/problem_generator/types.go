@@ -4,6 +4,7 @@ import "context"
 
 type GenerateRequest struct {
 	Name        string   `json:"name"`
+	Gender      string   `json:"gender"`
 	Operation   string   `json:"operation"` // add | sub | mul | div
 	NumProblems int      `json:"num_problems"`
 	MaxNumber   int      `json:"max_number"`

@@ -16,11 +16,31 @@
 
   <section class="section">
     <div class="container">
-      {{block "content" .}}{{end}}
+      {{ block "content" . }}{{ end }}
     </div>
   </section>
 
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+  <!-- 🔸 placeholder that will receive the snippet -->
+  <div id="downloadModal" class="modal"></div>
+
+  <script>
+    /* whenever htmx swaps out-of-band into #downloadModal, show it */
+    document.body.addEventListener('htmx:oobAfterSwap', (e) => {
+      if (e.detail.target.id === 'downloadModal') {
+        e.detail.target.classList.add('is-active');
+      }
+    });
+
+    /* delegate clicks on .modal-background or .delete to close */
+    document.addEventListener('click', (ev) => {
+      const closeBtn = ev.target.closest('.modal-background, .delete, [data-close-modal]');
+      if (closeBtn) {
+        closeBtn.closest('.modal').classList.remove('is-active');
+      }
+    });
+  </script>
 </body>
 </html>
 {{end}}

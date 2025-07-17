@@ -62,6 +62,7 @@ func (b Builder) Build(req *pb.GenerateRequest) (Prompt, error) {
 		prompt.User = fmt.Sprintf(`
 Here's the user's information:
 - Name: %s
+- Gender: %s
 - Preferred Topics: %s
 - Math Operation: %s
 - Number of Problems: %d
@@ -92,7 +93,7 @@ Please generate %d unique word %s problems that incorporate elements from the us
 *   If the operation is Subtraction or Division ensure that num1, num2 are in the order of the operation (avoid illogical operations based on the problem text
 *   Do not generate csv markdown blocks, only the contents of the csv
      `,
-			req.Name, topicsLine, req.Operation, req.NumProblems,
+			req.Name, req.Gender, topicsLine, req.Operation, req.NumProblems,
 			req.NumProblems, strings.ToLower(req.Operation),
 		)
 

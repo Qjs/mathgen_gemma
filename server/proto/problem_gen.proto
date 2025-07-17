@@ -7,11 +7,12 @@ option go_package = "./server/proto;proto";
 // Request to generate a math problem set
 message GenerateRequest {
   string name = 1;
-  string operation = 2;
-  int32 num_problems = 3;
-  int32 max_number = 4;
-  repeated string likes_nouns = 5;
-  repeated string likes_verbs = 6;
+  string gender = 2;
+  string operation = 3;
+  int32 num_problems = 4;
+  int32 max_number = 5;
+  repeated string likes_nouns = 6;
+  repeated string likes_verbs = 7;
 }
 
 // Single math problem

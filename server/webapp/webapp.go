@@ -89,6 +89,7 @@ func (app *WebApp) indexPage(c *gin.Context) {
 func (app *WebApp) generatePDF(c *gin.Context) {
 	// 1️⃣  Pull values from the HTML form
 	name := strings.TrimSpace(c.PostForm("name"))
+	gender := strings.TrimSpace(c.PostForm("gender"))
 	operation := strings.TrimSpace(c.PostForm("operation"))   // e.g. add, subtract…
 	numProblems, _ := strconv.Atoi(c.PostForm("numProblems")) // default to 10
 	if numProblems <= 0 {
@@ -105,6 +106,7 @@ func (app *WebApp) generatePDF(c *gin.Context) {
 
 	req := &pb.GenerateRequest{
 		Name:        name,
+		Gender:      gender,
 		Operation:   operation,
 		NumProblems: int32(numProblems),
 		MaxNumber:   int32(maxNumber),
@@ -161,9 +163,9 @@ func (app *WebApp) downloadPDF(c *gin.Context) {
 		c.String(http.StatusNotFound, "file not found")
 		return
 	}
-
 	filePath := matches[0]
-	c.FileAttachment(filePath, filepath.Base(filePath)[37:]) // strip uuid + '_' prefix
+	// serve with attachment header – forces “Save as…”
+	c.FileAttachment(filePath, filepath.Base(filePath)[37:]) // strips UUID_
 }
 
 // splitCSV turns "cat,  dog,fish " → []string{"cat","dog","fish"}

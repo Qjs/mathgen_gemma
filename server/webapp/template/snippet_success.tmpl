@@ -1,8 +1,27 @@
-{{define "snippet_success"}}
-<article class="message is-success mt-4">
-  <div class="message-body">
-    {{if .Name}}<strong>{{.Name}}</strong>, {{end}}your worksheet is ready
-    <a class="has-text-weight-bold" hx-boost="true" href="/download/{{.ID}}">download&nbsp;PDF</a>.
+<!-- server/webapp/template/snippet_success.tmpl -->
+<div id="downloadModal"                
+     hx-swap-oob="innerHTML"           
+     class="modal">
+
+  <div class="modal-background"></div>
+
+  <div class="modal-card">
+    <header class="modal-card-head">
+      <p class="modal-card-title">Worksheet ready 🎉</p>
+      <button class="delete" aria-label="close"></button>
+    </header>
+
+    <section class="modal-card-body">
+      <a class="button is-primary is-fullwidth mb-3"
+         href="/download/{{ .ID }}"
+         target="_blank">
+        <span class="icon"><i class="fa fa-download"></i></span>
+        <span>Download {{ .Filename }}</span>
+      </a>
+    </section>
+
+    <footer class="modal-card-foot">
+      <button class="button" data-close-modal>Close</button>
+    </footer>
   </div>
-</article>
-{{end}}
+</div>
