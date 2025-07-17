@@ -11,7 +11,6 @@ import (
 	"time"
 
 	grpcSrv "github.com/qjs/mathgen_gemma/server/grpc"
-	pdfg "github.com/qjs/mathgen_gemma/server/pdf_generator"
 	pg "github.com/qjs/mathgen_gemma/server/problem_generator"
 	pb "github.com/qjs/mathgen_gemma/server/proto"
 	"github.com/qjs/mathgen_gemma/server/webapp"
@@ -26,6 +25,8 @@ var (
 	ollama   = flag.String("ollama_url", "http://localhost:11434", "base URL of Ollama API")
 	model    = flag.String("model", "gemma3n:e4b", "model name to pass to Ollama")
 	webPort  = flag.String("web_port", ":8081", "port for Gin web UI")
+	// fontDir  = flag.String("font_dir", "./fonts", "directory of fonts")
+	// fontType = flag.String("font_type", "WinkySans-VariableFont_wght.ttf", "testing font")
 )
 
 func main() {
@@ -44,16 +45,10 @@ func main() {
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
 		log.Fatalf("mkdir %s: %v", *outDir, err)
 	}
+	// fontStr := fmt.Sprintf("%s/%s", *fontDir, *fontType)
 
-	pdfGen := pdfg.NewPDFGenerator(pdfg.Config{
-		PageSize:     "Letter",
-		MarginsMM:    20,
-		FontFamily:   "Helvetica",
-		PrimaryColor: [3]int{20, 20, 20},
-		Timeout:      30 * time.Second,
-	})
 	agent := pg.NewCSVAgent()
-	svc := grpcSrv.NewServer(pdfGen, *ollama, *model, agent) // <-- matches new signature
+	svc := grpcSrv.NewServer(*ollama, *model, agent) // <-- matches new signature
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterGeneratorServer(grpcServer, svc)

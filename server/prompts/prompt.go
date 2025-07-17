@@ -68,30 +68,29 @@ Here's the user's information:
 
 Please generate %d unique word %s problems that incorporate elements from the user's interests and are solvable using the specified math operation. The problems should be written in clear, engaging language suitable for a Kindergarden student (assume a general elementary/middle school level). 
 
-Example Problem Structure (Please aim for similar complexity and style): 
-
-Scenario: [briefly describe a scenario related to the user's interests]
-Problem: [state the math problem clearly] 
-
-Example Output (Format each problem as a csv): 
-
- "Problem 1","Dinosaur 🦖","Imagine Amelia is exploring a land filled with dino-sauruses! She sees 12 Stegosauruses and 9 Brachiosauruses. How many dinosaurs does Amelia see in all?",”addition”,9,12 
- "Problem 2","Space 🚀","Amelia is counting stars in the night sky. She spots 17 blue stars and 6 yellow stars. What is the total number of stars Amelia counts?",”addition”,17,6 
- "Problem 3","Unicorn 🦄","Princess Amelia has 11 sparkling unicorn charms and 7 rainbow unicorn stickers. How many unicorn goodies does she have altogether?",”addition”,11,7 
- "Problem 4","Volcano 🌋","At the volcano, there are 15 red rocks and 8 black rocks. How many rocks are there in total around the volcano?",”addition”,15,8 
- Remember to: 
-    * Vary the scenarios and the specific numbers used in the problems. 
-    * Ensure the problems are grammatically correct and easy to understand. 
-    * Clearly state the question being asked. 
-    * Incorporate the user's interests naturally within the problem context. 
-    * Maintain a positive and engaging tone. 
-    * Do not provide a code example just the question. 
-    * List questions in CSV form 
-    * Always start the CSV with a fixed header: "Index","theme","text","operation","num1","num2" 
-    * Add an emoji of the topic of the question next to the interest 
-    * The CSV row should have “Problem Number”, “theme”, “problem text'“, “operation”, num1,num2, 
-    * If the operation is Subtraction or Division ensure that num1, num2 are in the order of the operation (avoid illogical operations based on the problem text 
-     
+ **Example Problem Structure (Please aim for similar complexity and style):** **Scenario:** [briefly describe a scenario related to the user's interests] **Problem:** [state the math problem clearly] **"Problem 1","Dinosaur 🦖","Imagine Amelia is exploring a land filled with dino-sauruses! She sees 12 Stegosauruses and 9 Brachiosauruses. How many dinosaurs does Amelia see in all?",”addition”,9,12** **"Problem 2","Space 🚀","Amelia is counting stars in the night sky. She spots 17 blue stars and 6 yellow stars. What is the total number of stars Amelia counts?",”addition”,17,6** **"Problem 3","Unicorn 🦄","Princess Amelia has 11 sparkling unicorn charms and 7 rainbow unicorn stickers. How many unicorn goodies does she have altogether?",”addition”,11,7** **"Problem 4","Volcano 🌋","At the volcano, there are 15 red rocks and 8 black rocks. How many rocks are there in total around the volcano?",”addition”,15,8** **Remember to:**
+*   Vary the scenarios and the specific numbers used in the problems.
+    
+*   Ensure the problems are grammatically correct and easy to understand.
+    
+*   Clearly state the question being asked.
+    
+*   Incorporate the user's interests naturally within the problem context.
+    
+*   Maintain a positive and engaging tone.
+    
+*   Do not provide a code example just the question.
+    
+*   List questions in CSV form
+    
+*   Always start the CSV with a fixed header: "Index","theme","text","operation","num1","num2"
+    
+*   Add an emoji of the topic of the question next to the interest
+    
+*   the CSV row should have “Problem Number”, “theme”, “problem text'“, “operation”, num1,num2,
+    
+*   If the operation is Subtraction or Division ensure that num1, num2 are in the order of the operation (avoid illogical operations based on the problem text
+*   Do not generate csv markdown blocks, only the contents of the csv
      `,
 			req.Name, topicsLine, req.Operation, req.NumProblems,
 			req.NumProblems, strings.ToLower(req.Operation),

@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	pdfg "github.com/qjs/mathgen_gemma/server/pdf_generator"
+	pdfgenerator "github.com/qjs/mathgen_gemma/server/pdf_generator"
 	pg "github.com/qjs/mathgen_gemma/server/problem_generator"
 	"github.com/qjs/mathgen_gemma/server/prompts"
 	pb "github.com/qjs/mathgen_gemma/server/proto"
@@ -24,13 +24,12 @@ import (
 // Server implements the Generator gRPC service using the Ollama Go SDK.
 type Server struct {
 	pb.UnimplementedGeneratorServer
-	pdfgen *pdfg.PDFGenerator
 	client *api.Client
 	model  string
 	agent  pg.Agent
 }
 
-func NewServer(pdfgen *pdfg.PDFGenerator, ollamaBaseURL, model string, agent pg.Agent) *Server {
+func NewServer(ollamaBaseURL, model string, agent pg.Agent) *Server {
 	base, err := url.Parse(ollamaBaseURL)
 	if err != nil {
 		log.Fatalf("invalid Ollama URL: %v", err)
@@ -43,7 +42,6 @@ func NewServer(pdfgen *pdfg.PDFGenerator, ollamaBaseURL, model string, agent pg.
 	client := api.NewClient(base, httpClient)
 
 	return &Server{
-		pdfgen: pdfgen,
 		client: client,
 		model:  model,
 		agent:  agent,
@@ -90,6 +88,8 @@ func (s *Server) GenerateProblemSet(ctx context.Context, req *pb.GenerateRequest
 	fmt.Printf("%s\n", responseText)
 	ps, err := s.agent.Parse(responseText, req)
 	if err != nil {
+		fmt.Printf("failed to parse\n")
+
 		return nil, status.Errorf(codes.Internal, "parse LLM output: %v", err)
 	}
 	return convertFromInternal(ps), nil
@@ -104,7 +104,7 @@ func (s *Server) GenerateProblemSetPDF(ctx context.Context, psReq *pb.ProblemSet
 	tmp.Close()
 	defer os.Remove(tmp.Name())
 
-	if err := s.pdfgen.GeneratePDF(ctx, *convertToInternal(psReq), tmp.Name()); err != nil {
+	if err := pdfgenerator.GeneratePDF(ctx, *convertToInternal(psReq), tmp.Name()); err != nil {
 		return nil, status.Errorf(codes.Internal, "pdf gen: %v", err)
 	}
 	data, err := os.ReadFile(tmp.Name())

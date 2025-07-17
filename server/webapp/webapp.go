@@ -124,6 +124,7 @@ func (app *WebApp) generatePDF(c *gin.Context) {
 	fmt.Printf("Generated %d problems\n", len(problemResp.Problems))
 	pdfResp, err := app.GRPCClient.GenerateProblemSetPDF(ctx, problemResp)
 	if err != nil {
+		fmt.Printf("Failed to generate Problems %v\n", err)
 		c.String(http.StatusInternalServerError, "gRPC error: %v", err)
 		return
 	}
@@ -133,10 +134,14 @@ func (app *WebApp) generatePDF(c *gin.Context) {
 	fullPath := filepath.Join(app.tempDir, filename)
 	fmt.Printf("Saving PDF to %s\n", fullPath)
 	if err := os.MkdirAll(app.tempDir, 0o755); err != nil {
+		fmt.Printf("Failed to create dir\n")
+
 		c.String(http.StatusInternalServerError, "creating output dir: %v", err)
 		return
 	}
 	if err := os.WriteFile(fullPath, pdfResp.Pdf, 0o644); err != nil {
+		fmt.Printf("Failed to save pdf\n")
+
 		c.String(http.StatusInternalServerError, "saving PDF: %v", err)
 		return
 	}

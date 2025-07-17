@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	reInts        = regexp.MustCompile(`\d+`)
-	errEmptyCSV   = errors.New("empty CSV from LLM")
-	errBadColumns = errors.New("malformed CSV line (want at least Problem,Text)")
+	reInts      = regexp.MustCompile(`\d+`)
+	errEmptyCSV = errors.New("empty CSV from LLM")
+	// errBadColumns = errors.New("malformed CSV line (want at least Problem,Text)")
 )
 
 // CSVAgent implements Agent by reading "Problem,Text" rows and computing answers.
@@ -31,6 +31,19 @@ func (a *CSVAgent) Parse(llmOut string, req *pb.GenerateRequest) (*ProblemSet, e
 	r := csv.NewReader(strings.NewReader(llmOut))
 	r.TrimLeadingSpace = true
 	r.FieldsPerRecord = -1
+	r.LazyQuotes = true
+
+	header, err := r.Read()
+	if err != nil {
+		return nil, err
+	}
+
+	want := []string{"index", "theme", "text", "operation", "num1", "num2"}
+	for i, h := range header {
+		if strings.ToLower(strings.TrimSpace(h)) != want[i] {
+			return nil, errors.New("unexpected header layout")
+		}
+	}
 
 	var problems []Problem
 	recN := 0
@@ -51,7 +64,7 @@ func (a *CSVAgent) Parse(llmOut string, req *pb.GenerateRequest) (*ProblemSet, e
 		// ---------- pull index and two ints for value & compute answer --------------
 		idx, aNum, bNum, answer, err := extractNumbersAndAnswer(rec, strings.ToLower(req.Operation))
 		if err != nil {
-			return nil, fmt.Errorf("Unable to extract numbers and answer")
+			return nil, fmt.Errorf("unable to extract numbers and answer")
 		}
 		problems = append(problems, Problem{
 			Index:     idx,
@@ -82,7 +95,7 @@ func (a *CSVAgent) Parse(llmOut string, req *pb.GenerateRequest) (*ProblemSet, e
 
 func extractNumbersAndAnswer(text []string, op string) (int, int, int, string, error) {
 
-	idx, _ := strconv.Atoi(text[0])
+	idx, _ := safeAtoi(text[0])
 	a, _ := strconv.Atoi(text[4])
 	b, _ := strconv.Atoi(text[5])
 	ans, err := computeAnswer(op, a, b)
@@ -116,4 +129,12 @@ func computeAnswer(op string, num1, num2 int) (string, error) {
 	default:
 		return "0", fmt.Errorf("unknown operation %q", op)
 	}
+}
+
+func safeAtoi(s string) (int, error) {
+	digits := reInts.FindString(s)
+	if digits == "" {
+		return 0, fmt.Errorf("no digits in %q", s)
+	}
+	return strconv.Atoi(digits)
 }

@@ -1,69 +1,67 @@
 package pdfgenerator
 
 import (
+	"bytes"
 	"context"
-	"fmt"
+	"html/template"
+	"net/url"
+	"os"
 	"time"
 
+	"github.com/chromedp/cdproto/page"
+	"github.com/chromedp/chromedp"
 	pg "github.com/qjs/mathgen_gemma/server/problem_generator"
-
-	"codeberg.org/go-pdf/fpdf"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
-type Config struct {
-	PageSize     string
-	MarginsMM    float64
-	FontFamily   string
-	PrimaryColor [3]int
-	Timeout      time.Duration
-}
-
-type PDFGenerator struct {
-	cfg Config
-}
-
-func NewPDFGenerator(cfg Config) *PDFGenerator {
-	return &PDFGenerator{cfg}
-}
-
-func (p *PDFGenerator) GeneratePDF(ctx context.Context, ps pg.ProblemSet, outputFilePath string) error {
-	if dl, ok := ctx.Deadline(); ok {
-		time.AfterFunc(time.Until(dl), func() { /* abort if still running */ })
-	}
-	pdf := fpdf.New("P", "mm", p.cfg.PageSize, "")
-	pdf.SetMargins(p.cfg.MarginsMM, p.cfg.MarginsMM, p.cfg.MarginsMM)
-
-	pdf.SetTitle(fmt.Sprintf("%s's %s Problem Set", ps.MetaInfo.Name, cases.Title(language.English).String(ps.MetaInfo.Operation)), false)
-	pdf.AddPage()
-
-	// ---------- title ----------
-	pdf.SetFont(p.cfg.FontFamily, "B", 22)
-	title := fmt.Sprintf("%s's %s Problem Set", ps.MetaInfo.Name, cases.Title(language.English).String(ps.MetaInfo.Operation))
-	pdf.CellFormat(0, 15, title, "", 1, "C", false, 0, "")
-	pdf.Ln(10)
-
-	// ---------- problems ----------
-	pdf.SetFont(p.cfg.FontFamily, "", 14)
-	for _, problem := range ps.Problems {
-		txt := fmt.Sprintf("%d.%s, %s", problem.Index, problem.Theme, problem.Text)
-		pdf.MultiCell(0, 8, txt, "", "L", false)
-		txtResp := "Answer: _____"
-		pdf.MultiCell(0, 8, txtResp, "", "L", false)
+func GeneratePDF(ctx context.Context, ps pg.ProblemSet, outFile string) error {
+	// -- 1. fill template ----------------------------------------------------
+	tpl, err := template.ParseFiles("server/pdf_generator/template/problems.html")
+	if err != nil {
+		return err
 	}
 
-	pdf.AddPage()
-	answertitle := fmt.Sprintf("%s's %s Problem Set Answer Key", ps.MetaInfo.Name, cases.Title(language.English).String(ps.MetaInfo.Operation))
-	pdf.CellFormat(0, 15, answertitle, "", 1, "C", false, 0, "")
-	pdf.Ln(10)
-	// ---------- answers ----------
-	pdf.SetFont(p.cfg.FontFamily, "", 14)
-	for _, problem := range ps.Problems {
-		txt := fmt.Sprintf("%d. %s", problem.Index, problem.Answer)
-		pdf.MultiCell(0, 8, txt, "", "L", false)
-
+	data := map[string]any{
+		"Title":       ps.MetaInfo.Name + "'s " + ps.MetaInfo.Operation + " Problem Set",
+		"AnswerTitle": ps.MetaInfo.Name + "'s " + ps.MetaInfo.Operation + " Answer Key",
+		"Problems":    ps.Problems,
 	}
 
-	return pdf.OutputFileAndClose(outputFilePath)
+	var htmlBuf bytes.Buffer
+	if err := tpl.Execute(&htmlBuf, data); err != nil {
+		return err
+	}
+
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		// boolean flag (no value part)
+		chromedp.Flag("disable-gpu", true),
+
+		// flag that expects a value: headless=new
+		chromedp.Flag("headless", "new"),
+	)
+
+	// build allocator/context with the option list
+	allocCtx, cancel := chromedp.NewExecAllocator(ctx, opts...)
+	defer cancel()
+
+	chromeCtx, cancel := chromedp.NewContext(allocCtx)
+	defer cancel()
+
+	var pdfBuf []byte
+	if err := chromedp.Run(chromeCtx,
+		chromedp.Navigate("data:text/html,"+url.PathEscape(htmlBuf.String())),
+		// Wait for fonts/emoji to load
+		chromedp.Sleep(500*time.Millisecond),
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			var err error
+			pdfBuf, _, err = page.PrintToPDF().
+				WithPrintBackground(true).
+				Do(ctx)
+			return err
+		}),
+	); err != nil {
+		return err
+	}
+
+	// -- 3. save -------------------------------------------------------------
+	return os.WriteFile(outFile, pdfBuf, 0o644)
 }

@@ -20,3 +20,13 @@ fi
 # Copy all files from the source to the destination directory
 # Including hidden files and directories
 cp -r "$SRC_DIR"/. "$DEST_DIR"/
+
+PDF_DIR="./server/pdf_generator/template"
+PDF_DEST="./build/server/pdf_generator/template"
+
+# Create the destination directory if it doesn't exist
+if [ ! -d "$PDF_DEST" ]; then
+    mkdir -p "$PDF_DEST"
+fi
+
+cp -r "$PDF_DIR"/. "$PDF_DEST"/

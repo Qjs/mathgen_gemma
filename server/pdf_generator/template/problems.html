@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{ .Title }}</title>
+<style>
+  @page         { size: Letter; margin: 20mm; }
+  body          { font: 14pt "DejaVu Sans", "Noto Emoji", sans-serif; }
+  h1            { text-align: center; margin: 0 0 12mm; }
+  .answer-line  { margin-bottom: 6mm; }
+  .answers-page { page-break-before: always; }
+</style>
+</head>
+<body>
+  <h1>{{ .Title }}</h1>
+
+  {{ range .Problems }}
+    <p>{{ .Index }}.&nbsp;{{ .Theme }}, {{ .Text }}</p>
+    <p class="answer-line">Answer: _____</p>
+  {{ end }}
+
+  <div class="answers-page">
+    <h1>{{ .AnswerTitle }}</h1>
+    {{ range .Problems }}
+      <p>{{ .Index }}.&nbsp;{{ .Answer }}</p>
+    {{ end }}
+  </div>
+</body>
+</html>
