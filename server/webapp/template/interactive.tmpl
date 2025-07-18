@@ -1,0 +1,59 @@
+{{ define "interactive" }}
+  {{ template "header" . }}
+
+  <section class="section">
+    <div class="container">
+      <h1 class="title is-3 mb-4">
+        Interactive worksheet for {{ .Student }}
+      </h1>
+
+      <form id="answerForm">
+        {{ range $idx, $p := .Problems }}
+          <div class="field">
+            <label class="label">
+              {{ $p.Index}}. {{ $p.Text }}
+            </label>
+            <div class="control">
+              <input class="input"
+                     type="number"
+                     data-answer="{{ $p.Answer }}"
+                     name="q{{ $idx }}">
+            </div>
+            <p class="help is-danger is-hidden">Wrong 😓</p>
+          </div>
+        {{ end }}
+
+        <button class="button is-primary" type="button" id="checkBtn">
+          Check my answers
+        </button>
+        <span id="score" class="ml-3"></span>
+      </form>
+
+    </div>
+  </section>
+
+  <script>
+    document.getElementById('checkBtn').addEventListener('click', () => {
+      const inputs = document.querySelectorAll('#answerForm input[data-answer]');
+      let correct = 0;
+      inputs.forEach(inp => {
+        const expected = Number(inp.dataset.answer);
+        const help     = inp.parentElement.nextElementSibling; // <p class="help">
+        if (Number(inp.value) === expected) {
+          inp.classList.remove('is-danger');
+          inp.classList.add('is-success');
+          help.classList.add('is-hidden');
+          correct++;
+        } else {
+          inp.classList.remove('is-success');
+          inp.classList.add('is-danger');
+          help.classList.remove('is-hidden');
+        }
+      });
+      document.getElementById('score').textContent =
+          `Score: ${correct}/${inputs.length}`;
+    });
+  </script>
+
+  {{ template "footer" . }}
+{{ end }}

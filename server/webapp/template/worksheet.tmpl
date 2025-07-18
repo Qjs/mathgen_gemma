@@ -7,100 +7,111 @@
       <h1 class="title is-3">Generate a PDF Problem-Set</h1>
 
       <div class="box">
-        <form id="pdfForm"
-              hx-post="/generatePDF"
-              hx-target="#status"
-              hx-indicator="#spinner">
+        <form id="worksheetForm" method="post">        <!-- ← plain form, no htmx -->
 
-    <!-- Name -->
-    <div class="field">
-      <label class="label">Student name</label>
-      <div class="control">
-        <input class="input" type="text" name="name" placeholder="Alex" required>
-      </div>
+          <!-- Name -->
+          <div class="field">
+            <label class="label">Student name</label>
+            <div class="control">
+              <input class="input" type="text" name="name" placeholder="Alex" required>
+            </div>
+          </div>
+          <!-- Gender -->
+          <div class="field">
+            <label class="label">Gender</label>
+            <div class="control">
+              <div class="select">
+                <select name="gender" required>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <!-- Operation -->
+          <div class="field">
+            <label class="label">Operation</label>
+            <div class="control">
+              <div class="select">
+                <select name="operation" required>
+                  <option value="Addition">addition</option>
+                  <option value="Subtraction">subtraction</option>
+                  <option value="Multiply">multiplication</option>
+                  <option value="Divide">division</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        
+          <!-- Number of problems -->
+          <div class="field">
+            <label class="label">Number of problems</label>
+            <div class="control">
+              <input class="input" type="number" name="numProblems" value="10" min="1" required>
+            </div>
+          </div>
+        
+          <!-- Skill Level -->
+          <div class="field">
+            <label class="label">Difficulty Level</label>
+            <div class="control">
+              <div class="select">
+                <select name="gradeLevel" required>
+                  <option value="Kindergarten">Kindergarten</option>
+                  <option value="1st Grade">1st Grade</option>
+                  <option value="2nd Grade">2nd Grade</option>
+                  <option value="3rd Grade">3rd Grade</option>
+                  <option value="4th Grade">4th Grade</option>
+                  <option value="5th Grade">5th Grade</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        
+          <!-- Likes nouns -->
+          <div class="field">
+            <label class="label">Favourite nouns <span class="has-text-grey">(comma separated)</span></label>
+            <div class="control">
+              <input class="input" type="text" name="likesNouns" placeholder="pizza, robots">
+            </div>
+          </div>
+        
+          <!-- Likes verbs -->
+          <div class="field">
+            <label class="label">Favourite verbs <span class="has-text-grey">(comma separated)</span></label>
+            <div class="control">
+              <input class="input" type="text" name="likesVerbs" placeholder="run, jump">
+            </div>
+          </div>
+        
+          <!-- Submit + spinner -->
+          <div class="field">
+            <div class="control">
+              <div class="buttons">
+                <button class="button is-primary"
+                        type="button"
+                        hx-post="/generatePDF"
+                        hx-target="#status"
+                        hx-indicator="#spinner"
+                        hx-include="#worksheetForm">
+                  PDF Worksheet
+                </button>
+              
+                <button class="button is-link"
+                        formaction="/generateInteractive"
+                        type="submit"
+                        formmethod="post">
+                  Interactive Worksheet
+                </button>
+              </div>
+            </div>
+          </div>
+        </form>
     </div>
-    <!-- Gender -->
-    <div class="field">
-      <label class="label">Gender</label>
-      <div class="control">
-        <div class="select">
-          <select name="gender" required>
-            <option value="Male">Male</option>
-            <option value="Female">Female</option>
-          </select>
-        </div>
-      </div>
-    </div>
-    <!-- Operation -->
-    <div class="field">
-      <label class="label">Operation</label>
-      <div class="control">
-        <div class="select">
-          <select name="operation" required>
-            <option value="Addition">addition</option>
-            <option value="Subtraction">subtraction</option>
-            <option value="Multiply">multiplication</option>
-            <option value="Divide">division</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Number of problems -->
-    <div class="field">
-      <label class="label">Number of problems</label>
-      <div class="control">
-        <input class="input" type="number" name="numProblems" value="10" min="1" required>
-      </div>
-    </div>
-
-    <!-- Skill Level -->
-    <div class="field">
-      <label class="label">Difficulty Level</label>
-      <div class="control">
-        <div class="select">
-          <select name="gradeLevel" required>
-            <option value="Kindergarten">Kindergarten</option>
-            <option value="1st Grade">1st Grade</option>
-            <option value="2nd Grade">2nd Grade</option>
-            <option value="3rd Grade">3rd Grade</option>
-            <option value="4th Grade">4th Grade</option>
-            <option value="5th Grade">5th Grade</option>
-          </select>
-        </div>
-      </div>
-    </div>
-
-    <!-- Likes nouns -->
-    <div class="field">
-      <label class="label">Favourite nouns <span class="has-text-grey">(comma separated)</span></label>
-      <div class="control">
-        <input class="input" type="text" name="likesNouns" placeholder="pizza, robots">
-      </div>
-    </div>
-
-    <!-- Likes verbs -->
-    <div class="field">
-      <label class="label">Favourite verbs <span class="has-text-grey">(comma separated)</span></label>
-      <div class="control">
-        <input class="input" type="text" name="likesVerbs" placeholder="run, jump">
-      </div>
-    </div>
-
-    <!-- Submit + spinner -->
-    <div class="field">
-      <div class="control">
-        <button class="button is-primary">Generate PDF</button>
-        <span id="spinner" class="icon is-large has-text-link is-hidden">
-          <i class="fas fa-circle-notch fa-spin fa-lg"></i>
-        </span>
-      </div>
-    </div>
-  </form>
 </div>
-      <div id="status"></div>
+<div id="status"></div>
     </div>
-  </section>
+</section>
 
   {{ template "footer" . }}
 {{ end }}

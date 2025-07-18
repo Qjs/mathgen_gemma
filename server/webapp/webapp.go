@@ -78,6 +78,7 @@ func (app *WebApp) setupRoutes() {
 	app.Router.GET("/", app.homePage)
 	app.Router.GET("/worksheet", app.formPage)
 	app.Router.POST("/generatePDF", app.generatePDF)
+	app.Router.POST("/generateInteractive", app.generateInteractive)
 	app.Router.GET("/download/:id", app.downloadPDF)
 }
 
@@ -96,30 +97,9 @@ func (app *WebApp) formPage(c *gin.Context) {
 
 // POST /generatePDF  (htmx request)
 func (app *WebApp) generatePDF(c *gin.Context) {
-	// 1️⃣  Pull values from the HTML form
-	name := strings.TrimSpace(c.PostForm("name"))
-	gender := strings.TrimSpace(c.PostForm("gender"))
-	operation := strings.TrimSpace(c.PostForm("operation"))   // e.g. add, subtract…
-	numProblems, _ := strconv.Atoi(c.PostForm("numProblems")) // default to 10
-	if numProblems <= 0 {
-		numProblems = 10
-	}
 
-	gradeLevel := strings.TrimSpace(c.PostForm("gradeLevel"))
+	req := extractRequestFromForm(c)
 
-	likesNouns := splitCSV(c.PostForm("likesNouns")) // helper below
-	likesVerbs := splitCSV(c.PostForm("likesVerbs"))
-
-	req := &pb.GenerateRequest{
-		Name:        name,
-		Gender:      gender,
-		Operation:   operation,
-		NumProblems: int32(numProblems),
-		GradeLevel:  gradeLevel,
-		LikesNouns:  likesNouns,
-		LikesVerbs:  likesVerbs,
-	}
-	fmt.Printf("Generating %d %s problems for %s at a %s level\n", numProblems, operation, name, gradeLevel)
 	// 2️⃣  Call gRPC → PDF
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 90*time.Second)
 	defer cancel()
@@ -160,6 +140,30 @@ func (app *WebApp) generatePDF(c *gin.Context) {
 		"Filename": pdfResp.Filename,
 	})
 }
+func (app *WebApp) generateInteractive(c *gin.Context) {
+
+	req := extractRequestFromForm(c)
+
+	// 2️⃣  Call gRPC → PDF
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 90*time.Second)
+	defer cancel()
+
+	problemResp, err := app.GRPCClient.GenerateProblemSet(ctx, req)
+	if err != nil {
+		c.String(http.StatusInternalServerError, "gRPC error: %v", err)
+		return
+	}
+	fmt.Printf("Generated %d problems\n", len(problemResp.Problems))
+
+	// Render a full page; not htmx snippet
+	c.HTML(http.StatusOK, "interactive", gin.H{
+		"Title":     "Interactive Worksheet",
+		"Problems":  problemResp.Problems, // slice of {Text, Answer}
+		"Student":   req.Name,
+		"Operation": req.Operation,
+	})
+
+}
 
 // GET /download/:id
 func (app *WebApp) downloadPDF(c *gin.Context) {
@@ -172,6 +176,37 @@ func (app *WebApp) downloadPDF(c *gin.Context) {
 	filePath := matches[0]
 	// serve with attachment header – forces “Save as…”
 	c.FileAttachment(filePath, filepath.Base(filePath)[37:]) // strips UUID_
+}
+
+// extractRequestFromForm
+
+func extractRequestFromForm(c *gin.Context) *pb.GenerateRequest {
+	// 1️⃣  Pull values from the HTML form
+	name := strings.TrimSpace(c.PostForm("name"))
+	gender := strings.TrimSpace(c.PostForm("gender"))
+	operation := strings.TrimSpace(c.PostForm("operation"))   // e.g. add, subtract…
+	numProblems, _ := strconv.Atoi(c.PostForm("numProblems")) // default to 10
+	if numProblems <= 0 {
+		numProblems = 10
+	}
+
+	gradeLevel := strings.TrimSpace(c.PostForm("gradeLevel"))
+
+	likesNouns := splitCSV(c.PostForm("likesNouns")) // helper below
+	likesVerbs := splitCSV(c.PostForm("likesVerbs"))
+
+	fmt.Printf("Generating %d %s problems for %s at a %s level\n", numProblems, operation, name, gradeLevel)
+
+	req := &pb.GenerateRequest{
+		Name:        name,
+		Gender:      gender,
+		Operation:   operation,
+		NumProblems: int32(numProblems),
+		GradeLevel:  gradeLevel,
+		LikesNouns:  likesNouns,
+		LikesVerbs:  likesVerbs,
+	}
+	return req
 }
 
 // splitCSV turns "cat,  dog,fish " → []string{"cat","dog","fish"}
