@@ -3,6 +3,7 @@ package problemgenerator
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -21,6 +22,9 @@ var (
 
 // CSVAgent implements Agent by reading "Problem,Text" rows and computing answers.
 type CSVAgent struct{}
+
+// JSONAgent implements Agent by reading the JSON output from the LLM and continuing Problem struct
+type JSONAgent struct{}
 
 func NewCSVAgent() *CSVAgent { return &CSVAgent{} }
 
@@ -92,7 +96,65 @@ func (a *CSVAgent) Parse(llmOut string, req *pb.GenerateRequest) (*ProblemSet, e
 	return &ProblemSet{Problems: problems, MetaInfo: meta}, nil
 }
 
+func NewJSONAgent() *JSONAgent { return &JSONAgent{} }
+
+// ----------------------------- core logic ------------------------------
+// JSON output is as such
+// "Index","theme","text","operation",
+func (a *JSONAgent) Parse(llmOut string, req *pb.GenerateRequest) (*ProblemSet, error) {
+	clean := cleanCodeBlock(llmOut)
+
+	var raw []struct {
+		Index     int    `json:"index"`
+		Theme     string `json:"theme"`
+		Text      string `json:"text"`
+		Operation string `json:"operation"`
+	}
+	if err := json.Unmarshal([]byte(clean), &raw); err != nil {
+		return nil, fmt.Errorf("JSONAgent: failed to parse LLM JSON: %w", err)
+	}
+
+	var problems []Problem
+	for _, rp := range raw {
+		aNum, bNum, answer, err := extractNumAnswerText(rp.Text, rp.Operation)
+		if err != nil {
+			return nil, fmt.Errorf("failed to extract numbers: %v", err)
+		}
+		problems = append(problems, Problem{
+			Index:     rp.Index,
+			Theme:     rp.Theme,
+			Text:      rp.Text,
+			Numbers:   []int{aNum, bNum},
+			Operation: rp.Operation,
+			Answer:    answer,
+		})
+	}
+	meta := GenerateRequest{
+		Name:        req.Name,
+		Gender:      req.Gender,
+		Operation:   req.Operation,
+		NumProblems: int(req.NumProblems),
+		GradeLevel:  req.GradeLevel,
+		LikesNouns:  req.LikesNouns,
+		LikesVerbs:  req.LikesVerbs,
+	}
+	return &ProblemSet{Problems: problems, MetaInfo: meta}, nil
+}
+
 // ----------------------------- helpers --------------------------------
+func extractNumAnswerText(text string, op string) (int, int, string, error) {
+	numStrs := reInts.FindAllString(text, 2)
+	if len(numStrs) < 2 {
+		return 0, 0, "N/A", fmt.Errorf("problem %d: could not find two integers in text")
+	}
+	aNum, _ := strconv.Atoi(numStrs[0])
+	bNum, _ := strconv.Atoi(numStrs[1])
+	ans, err := computeAnswer(op, aNum, bNum)
+	if err != nil {
+		return 0, 0, "N/A", fmt.Errorf("couldn't compute answer %v", err)
+	}
+	return aNum, bNum, ans, nil
+}
 
 func extractNumbersAndAnswer(text []string, op string) (int, int, int, string, error) {
 
@@ -138,4 +200,19 @@ func safeAtoi(s string) (int, error) {
 		return 0, fmt.Errorf("no digits in %q", s)
 	}
 	return strconv.Atoi(digits)
+}
+
+func cleanCodeBlock(s string) string {
+	s = strings.TrimSpace(s)
+	if strings.HasPrefix(s, "```") {
+		// drop opening fence
+		if i := strings.Index(s, "\n"); i >= 0 {
+			s = s[i+1:]
+		}
+		// drop closing fence
+		if j := strings.LastIndex(s, "```"); j >= 0 {
+			s = s[:j]
+		}
+	}
+	return strings.TrimSpace(s)
 }

@@ -47,7 +47,9 @@ func main() {
 	}
 	// fontStr := fmt.Sprintf("%s/%s", *fontDir, *fontType)
 
-	agent := pg.NewCSVAgent()
+	// agent := pg.NewCSVAgent()
+	agent := pg.NewJSONAgent()
+
 	svc := grpcSrv.NewServer(*ollama, *model, agent) // <-- matches new signature
 
 	grpcServer := grpc.NewServer()

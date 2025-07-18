@@ -54,7 +54,7 @@ func (s *Server) GenerateProblemSet(ctx context.Context, req *pb.GenerateRequest
 	// 1. Build the prompt with our style
 	//------------------------------------------------------------------
 	pbldr := prompts.Builder{
-		Style: prompts.StyleProblemset,
+		Style: prompts.StyleProblemsetJSON,
 		Model: s.model,
 	}
 	prompt, err := pbldr.Build(req)

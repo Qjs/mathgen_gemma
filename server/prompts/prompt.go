@@ -28,6 +28,7 @@ const (
 	StyleSchema
 	StyleVerbose
 	StyleProblemset
+	StyleProblemsetJSON
 )
 
 // Builder holds configuration for generating prompts.
@@ -103,6 +104,75 @@ Please generate %d unique word %s problems that incorporate elements from the us
 			req.NumProblems, strings.ToLower(req.Operation), req.GradeLevel,
 		)
 
+	case StyleProblemsetJSON:
+		// Assemble topics from LikesNouns + LikesVerbs for "Preferred Topics" line.
+		topics := append([]string{}, req.LikesNouns...)
+		topics = append(topics, req.LikesVerbs...)
+		topicsLine := strings.Join(topics, ", ")
+
+		prompt.User = fmt.Sprintf(`
+Here's the user's information:
+- Name: %s
+- Gender: %s
+- Grade Level: %s
+- Preferred Topics: %s
+- Math Operation: %s
+- Number of Problems: %d
+
+Please generate %d unique word %s problems that incorporate elements from the user's interests and are solvable using the specified math operation. The problems should be written in clear, engaging language suitable for a %s student. 
+
+ **Example Problem Structure (Please aim for similar complexity and style):** **Scenario:** [briefly describe a scenario related to the user's interests] **Problem:** [state the math problem clearly] 
+  {
+    "index": 1,
+    "theme": "Dinosaur 🦖",
+    "Text": "Imagine Amelia is exploring a land filled with dino-sauruses! She sees %%d Stegosauruses and %%d Brachiosauruses. How many dinosaurs does Amelia see in all?",
+    "operation": "addition",
+  },
+  {
+    "index": 2,
+    "theme": "Space 🚀",
+    "text": "Amelia is counting stars in the night sky. She spots %%d blue stars and %%d yellow stars. What is the total number of stars Amelia counts?",
+    "operation": "addition",
+  },
+  {
+    "index": 3,
+    "theme": "Unicorn 🦄",
+    "text": "Princess Amelia has %%d sparkling unicorn charms and %%d rainbow unicorn stickers. How many unicorn goodies does she have altogether?",
+    "operation": "addition",
+
+  },
+  {
+    "index": 4,
+    "theme": "Volcano 🌋",
+    "text": "At the volcano, there are %%d red rocks and %%d black rocks. How many rocks are there in total around the volcano?",
+    "operation": "addition",
+  }
+ **Remember to:**
+*   Vary the scenarios and the specific numbers used in the problems.
+    
+*   Ensure the problems are grammatically correct and easy to understand.
+    
+*   Clearly state the question being asked.
+    
+*   Incorporate the user's interests naturally within the problem context.
+    
+*   Maintain a positive and engaging tone.
+    
+*   Do not provide a code example just the question.
+    
+*   List questions in JSON Form
+    
+*   Always start the JSON strings as: "Index","theme","text","operation"
+    
+*   Add an emoji of the topic of the question next to the interest
+
+*   Do not generate markdown blocks, only the JSON
+
+*   The problem should be consistent with the requested operation. If the operation is division it ONLY should be division. If Operation is Subtraction ONLY subtraction. If Operation is Multiplication ONLY multiplication. 
+     `,
+			req.Name, req.Gender, req.GradeLevel, topicsLine, req.Operation, req.NumProblems,
+			req.NumProblems, strings.ToLower(req.Operation), req.GradeLevel,
+		)
 	case StyleVerbose:
 		fallthrough // default falls back to verbose
 
