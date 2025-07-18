@@ -10,7 +10,7 @@ message GenerateRequest {
   string gender = 2;
   string operation = 3;
   int32 num_problems = 4;
-  int32 max_number = 5;
+  string grade_level = 5;
   repeated string likes_nouns = 6;
   repeated string likes_verbs = 7;
 }

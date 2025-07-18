@@ -85,7 +85,7 @@ func (a *CSVAgent) Parse(llmOut string, req *pb.GenerateRequest) (*ProblemSet, e
 		Gender:      req.Gender,
 		Operation:   req.Operation,
 		NumProblems: int(req.NumProblems),
-		MaxNumber:   int(req.MaxNumber),
+		GradeLevel:  req.GradeLevel,
 		LikesNouns:  req.LikesNouns,
 		LikesVerbs:  req.LikesVerbs,
 	}

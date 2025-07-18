@@ -7,7 +7,7 @@ type GenerateRequest struct {
 	Gender      string   `json:"gender"`
 	Operation   string   `json:"operation"` // add | sub | mul | div
 	NumProblems int      `json:"num_problems"`
-	MaxNumber   int      `json:"max_number"`
+	GradeLevel  string   `json:"grade_level"`
 	LikesNouns  []string `json:"likes_nouns"`
 	LikesVerbs  []string `json:"likes_verbs"`
 }

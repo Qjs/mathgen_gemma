@@ -49,8 +49,8 @@ func (b Builder) Build(req *pb.GenerateRequest) (Prompt, error) {
 	switch b.Style {
 	case StyleCompact:
 		prompt.User = fmt.Sprintf(
-			"Generate %d %s problems with numbers up to %d in pure JSON (no markdown).",
-			req.NumProblems, strings.ToLower(req.Operation), req.MaxNumber,
+			"Generate %d %s problems with numbers up to %s in pure JSON (no markdown).",
+			req.NumProblems, strings.ToLower(req.Operation), req.GradeLevel,
 		)
 
 	case StyleProblemset:
@@ -63,13 +63,19 @@ func (b Builder) Build(req *pb.GenerateRequest) (Prompt, error) {
 Here's the user's information:
 - Name: %s
 - Gender: %s
+- Grade Level: %s
 - Preferred Topics: %s
 - Math Operation: %s
 - Number of Problems: %d
 
-Please generate %d unique word %s problems that incorporate elements from the user's interests and are solvable using the specified math operation. The problems should be written in clear, engaging language suitable for a Kindergarden student (assume a general elementary/middle school level). 
+Please generate %d unique word %s problems that incorporate elements from the user's interests and are solvable using the specified math operation. The problems should be written in clear, engaging language suitable for a %s student. 
 
- **Example Problem Structure (Please aim for similar complexity and style):** **Scenario:** [briefly describe a scenario related to the user's interests] **Problem:** [state the math problem clearly] **"Problem 1","Dinosaur 🦖","Imagine Amelia is exploring a land filled with dino-sauruses! She sees 12 Stegosauruses and 9 Brachiosauruses. How many dinosaurs does Amelia see in all?",”addition”,9,12** **"Problem 2","Space 🚀","Amelia is counting stars in the night sky. She spots 17 blue stars and 6 yellow stars. What is the total number of stars Amelia counts?",”addition”,17,6** **"Problem 3","Unicorn 🦄","Princess Amelia has 11 sparkling unicorn charms and 7 rainbow unicorn stickers. How many unicorn goodies does she have altogether?",”addition”,11,7** **"Problem 4","Volcano 🌋","At the volcano, there are 15 red rocks and 8 black rocks. How many rocks are there in total around the volcano?",”addition”,15,8** **Remember to:**
+ **Example Problem Structure (Please aim for similar complexity and style):** **Scenario:** [briefly describe a scenario related to the user's interests] **Problem:** [state the math problem clearly] 
+ **"Problem 1","Dinosaur 🦖","Imagine Amelia is exploring a land filled with dino-sauruses! She sees 12 Stegosauruses and 9 Brachiosauruses. How many dinosaurs does Amelia see in all?",”addition”,9,12** 
+ **"Problem 2","Space 🚀","Amelia is counting stars in the night sky. She spots 17 blue stars and 6 yellow stars. What is the total number of stars Amelia counts?",”addition”,17,6** 
+ **"Problem 3","Unicorn 🦄","Princess Amelia has 11 sparkling unicorn charms and 7 rainbow unicorn stickers. How many unicorn goodies does she have altogether?",”addition”,11,7** 
+ **"Problem 4","Volcano 🌋","At the volcano, there are 15 red rocks and 8 black rocks. How many rocks are there in total around the volcano?",”addition”,15,8** 
+ **Remember to:**
 *   Vary the scenarios and the specific numbers used in the problems.
     
 *   Ensure the problems are grammatically correct and easy to understand.
@@ -93,8 +99,8 @@ Please generate %d unique word %s problems that incorporate elements from the us
 *   If the operation is Subtraction or Division ensure that num1, num2 are in the order of the operation (avoid illogical operations based on the problem text
 *   Do not generate csv markdown blocks, only the contents of the csv
      `,
-			req.Name, req.Gender, topicsLine, req.Operation, req.NumProblems,
-			req.NumProblems, strings.ToLower(req.Operation),
+			req.Name, req.Gender, req.GradeLevel, topicsLine, req.Operation, req.NumProblems,
+			req.NumProblems, strings.ToLower(req.Operation), req.GradeLevel,
 		)
 
 	case StyleVerbose:
@@ -102,8 +108,8 @@ Please generate %d unique word %s problems that incorporate elements from the us
 
 	default:
 		prompt.User = fmt.Sprintf(
-			"You are an expert math teacher. Create %d engaging %s word problems using numbers up to %d. Incorporate the following nouns %v and verbs %v in the story. Provide the output strictly as JSON with fields: index, text, numbers, operation, answer, and a meta object containing the original request parameters. Do NOT embed markdown.",
-			req.NumProblems, req.Operation, req.MaxNumber, req.LikesNouns, req.LikesVerbs,
+			"You are an expert math teacher. Create %d engaging %s word problems using numbers up to %s. Incorporate the following nouns %v and verbs %v in the story. Provide the output strictly as JSON with fields: index, text, numbers, operation, answer, and a meta object containing the original request parameters. Do NOT embed markdown.",
+			req.NumProblems, req.Operation, req.GradeLevel, req.LikesNouns, req.LikesVerbs,
 		)
 	}
 	return prompt, nil

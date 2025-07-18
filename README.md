@@ -11,11 +11,10 @@ Spin up server and publish
 ## how to build and run
 ```
 go mod tidy
-go build
-
+./build.sh
+cd ./build/
 ./mathgen
 ```
-Todo: move the request process into RPC call.
 
 
 

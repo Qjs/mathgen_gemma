@@ -135,7 +135,7 @@ func convertToInternal(pbps *pb.ProblemSet) *pg.ProblemSet {
 		Name:        pbps.Meta.Name,
 		Operation:   pbps.Meta.Operation,
 		NumProblems: int(pbps.Meta.NumProblems),
-		MaxNumber:   int(pbps.Meta.MaxNumber),
+		GradeLevel:  pbps.Meta.GradeLevel,
 		LikesNouns:  pbps.Meta.LikesNouns,
 		LikesVerbs:  pbps.Meta.LikesVerbs,
 	}
@@ -163,7 +163,7 @@ func convertFromInternal(pg *pg.ProblemSet) *pb.ProblemSet {
 		Name:        pg.MetaInfo.Name,
 		Operation:   pg.MetaInfo.Operation,
 		NumProblems: int32(pg.MetaInfo.NumProblems),
-		MaxNumber:   int32(pg.MetaInfo.MaxNumber),
+		GradeLevel:  pg.MetaInfo.GradeLevel,
 		LikesNouns:  pg.MetaInfo.LikesNouns,
 		LikesVerbs:  pg.MetaInfo.LikesVerbs,
 	}

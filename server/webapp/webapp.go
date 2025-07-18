@@ -105,10 +105,7 @@ func (app *WebApp) generatePDF(c *gin.Context) {
 		numProblems = 10
 	}
 
-	maxNumber, _ := strconv.Atoi(c.PostForm("maxNumber")) // default to 100
-	if maxNumber <= 0 {
-		maxNumber = 100
-	}
+	gradeLevel := strings.TrimSpace(c.PostForm("gradeLevel"))
 
 	likesNouns := splitCSV(c.PostForm("likesNouns")) // helper below
 	likesVerbs := splitCSV(c.PostForm("likesVerbs"))
@@ -118,11 +115,11 @@ func (app *WebApp) generatePDF(c *gin.Context) {
 		Gender:      gender,
 		Operation:   operation,
 		NumProblems: int32(numProblems),
-		MaxNumber:   int32(maxNumber),
+		GradeLevel:  gradeLevel,
 		LikesNouns:  likesNouns,
 		LikesVerbs:  likesVerbs,
 	}
-	fmt.Printf("Generating %d %s problems for %s (max number: %d)\n", numProblems, operation, name, maxNumber)
+	fmt.Printf("Generating %d %s problems for %s at a %s level\n", numProblems, operation, name, gradeLevel)
 	// 2️⃣  Call gRPC → PDF
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 90*time.Second)
 	defer cancel()
