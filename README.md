@@ -39,3 +39,13 @@ Usage of ./mathgen:
 ```
 
 
+Ideas:
+-- Add Logo
+-- Sqlite database
+    - Display # of Problem sets generated (broken down by Operation)
+    - PDF vs Interactive
+-- Description of the goals
+-- form submission checks
+-- Mutex WG for ollama calls
+-- Dockerize
+-- 
