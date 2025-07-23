@@ -35,7 +35,7 @@ const (
 // You can stash model‑specific tweaks here if needed.
 type Builder struct {
 	Style Style
-	Model string // optional: model name for conditional phrasing
+	Model string
 }
 
 type Prompt struct {

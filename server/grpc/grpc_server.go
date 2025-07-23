@@ -1,5 +1,5 @@
-// server/grpc/grpc_server.go
-package grpcSrv
+// Package grpcsrv hosts the grpcsrv
+package grpcsrv
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func NewServer(ollamaBaseURL, model string, agent pg.Agent) *Server {
 	}
 
 	httpClient := &http.Client{
-		Timeout: 120 * time.Second, // whatever is sensible for your env
+		Timeout: 120 * time.Second,
 	}
 
 	client := api.NewClient(base, httpClient)

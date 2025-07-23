@@ -1,3 +1,4 @@
+// Package webapp hosts a web platform
 package webapp
 
 import (
@@ -40,7 +41,7 @@ func NewWebApp(grpcClient pb.GeneratorClient, outputDir string) *WebApp {
 	app := &WebApp{
 		Router:     router,
 		GRPCClient: grpcClient,
-		tempDir:    outputDir, // or a dedicated work dir
+		tempDir:    outputDir,
 	}
 	app.setupRoutes()
 	return app
@@ -97,7 +98,6 @@ func (app *WebApp) formPage(c *gin.Context) {
 
 // POST /generatePDF  (htmx request)
 func (app *WebApp) generatePDF(c *gin.Context) {
-
 	req := extractRequestFromForm(c)
 
 	// 2️⃣  Call gRPC → PDF
@@ -140,8 +140,9 @@ func (app *WebApp) generatePDF(c *gin.Context) {
 		"Filename": pdfResp.Filename,
 	})
 }
-func (app *WebApp) generateInteractive(c *gin.Context) {
 
+// POST generateInteractive
+func (app *WebApp) generateInteractive(c *gin.Context) {
 	req := extractRequestFromForm(c)
 
 	// 2️⃣  Call gRPC → PDF
@@ -162,7 +163,6 @@ func (app *WebApp) generateInteractive(c *gin.Context) {
 		"Student":   req.Name,
 		"Operation": req.Operation,
 	})
-
 }
 
 // GET /download/:id
@@ -178,6 +178,9 @@ func (app *WebApp) downloadPDF(c *gin.Context) {
 	c.FileAttachment(filePath, filepath.Base(filePath)[37:]) // strips UUID_
 }
 
+/*
+	Helpers
+*/
 // extractRequestFromForm
 
 func extractRequestFromForm(c *gin.Context) *pb.GenerateRequest {

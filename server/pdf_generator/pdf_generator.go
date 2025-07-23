@@ -14,7 +14,6 @@ import (
 )
 
 func GeneratePDF(ctx context.Context, ps pg.ProblemSet, outFile string) error {
-	// -- 1. fill template ----------------------------------------------------
 	tpl, err := template.ParseFiles("server/pdf_generator/template/problems.html")
 	if err != nil {
 		return err

@@ -25,12 +25,9 @@ var (
 	ollama   = flag.String("ollama_url", "http://localhost:11434", "base URL of Ollama API")
 	model    = flag.String("model", "gemma3n:e4b", "model name to pass to Ollama")
 	webPort  = flag.String("web_port", ":8081", "port for Gin web UI")
-	// fontDir  = flag.String("font_dir", "./fonts", "directory of fonts")
-	// fontType = flag.String("font_type", "WinkySans-VariableFont_wght.ttf", "testing font")
 )
 
 func main() {
-
 	flag.Parse()
 
 	//------------------------------------------------------------
@@ -45,12 +42,11 @@ func main() {
 	if err := os.MkdirAll(*outDir, 0o755); err != nil {
 		log.Fatalf("mkdir %s: %v", *outDir, err)
 	}
-	// fontStr := fmt.Sprintf("%s/%s", *fontDir, *fontType)
 
 	// agent := pg.NewCSVAgent()
 	agent := pg.NewJSONAgent()
 
-	svc := grpcSrv.NewServer(*ollama, *model, agent) // <-- matches new signature
+	svc := grpcSrv.NewServer(*ollama, *model, agent)
 
 	grpcServer := grpc.NewServer()
 	pb.RegisterGeneratorServer(grpcServer, svc)
@@ -74,16 +70,13 @@ func main() {
 
 	client := pb.NewGeneratorClient(conn)
 
-	// after you create `client` (the gRPC client):
 	webApp := webapp.NewWebApp(client, *outDir)
 	go webApp.Run(*webPort)
 
-	// This is the crucial part: Wait for the shutdown signal
 	<-ctx.Done()
 	log.Println("⏹  shutting down …")
 
-	// Now gracefully shut down both servers
-	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second) // Give it some time
+	shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancelShutdown()
 
 	if err := webApp.Shutdown(shutdownCtx); err != nil {
