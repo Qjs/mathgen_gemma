@@ -2,3 +2,8 @@ textarea.textarea{min-height:14rem}
 
 /* htmx spinner handling */
 .htmx-request #spinner{display:inline-block}
+
+/* Center the box more nicely on tall screens */
+#loadingModal .modal-content {
+  max-width: 22rem;          /* keeps it compact */
+}

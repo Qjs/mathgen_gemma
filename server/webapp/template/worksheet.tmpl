@@ -98,9 +98,13 @@
                 </button>
               
                 <button class="button is-link"
-                        formaction="/generateInteractive"
-                        type="submit"
-                        formmethod="post">
+                        type="button"
+
+                        hx-post="/generateInteractive"   
+                        hx-target="body"                 
+                        hx-include="#worksheetForm"      
+                        hx-push-url="true"               
+                        hx-on:click="this.setAttribute('disabled','');">
                   Interactive Worksheet
                 </button>
               </div>
@@ -112,6 +116,44 @@
 <div id="status"></div>
     </div>
 </section>
+<!-- Loading modal ------------------------------------------------------- -->
+<div id="loadingModal" class="modal">
+  <div class="modal-background"></div>
 
+  <div class="modal-content">
+    <!-- The Box gives us a white/light background + padding + shadow -->
+    <div class="box has-text-centered p-6">
+      <span class="icon is-large has-text-info">
+        <i class="fas fa-spinner fa-pulse fa-3x"></i>
+      </span>
+
+      <p class="title is-5 mt-4 has-text-weight-semibold">
+        Generating your problem set…
+      </p>
+    </div>
+  </div>
+</div>
+<!-- /Loading modal ------------------------------------------------------ -->
+<script>
+  (function () {
+    const modal = document.getElementById('loadingModal');
+
+    // Show the modal before any htmx request originating on this page
+    document.body.addEventListener('htmx:beforeRequest', (evt) => {
+      // We only want the spinner for our PDF request, not for every htmx call
+      if (evt.target.id === 'worksheetForm' || evt.target.closest('#worksheetForm')) {
+        modal.classList.add('is-active');
+      }
+    });
+
+    // Hide it after *any* response (success or failure)
+    const hide = () => modal.classList.remove('is-active');
+    document.body.addEventListener('htmx:afterRequest', hide);
+    document.body.addEventListener('htmx:responseError', hide);
+  })();
+</script>
+<!-- /Loading modal ------------------------------------------------------ -->
   {{ template "footer" . }}
 {{ end }}
+
+x
