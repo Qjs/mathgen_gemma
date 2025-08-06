@@ -3,7 +3,7 @@ export PATH=$PATH:$GOPATH/bin
 
 protoc --go_out=. --go-grpc_out=. ./server/proto/problem_gen.proto
 
-go build -o build/mathgen
+go build -o build/tinysolvers
 
 # Exit immediately if a command exits with a non-zero status
 set -e
